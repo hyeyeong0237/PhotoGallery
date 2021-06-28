@@ -1,5 +1,6 @@
 package com.example.photogallery
 
+import android.app.DownloadManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
@@ -8,7 +9,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.photogallery.api.FlickerResponse
 import com.example.photogallery.api.FlickrApi
+import com.example.photogallery.api.PhotoInterceptor
 import com.example.photogallery.api.PhotoResponse
+import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
@@ -24,21 +27,30 @@ class FlickrFetchr {
     private val flickrApi : FlickrApi
 
     init {
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor(PhotoInterceptor())
+            .build()
         val retrofit : Retrofit = Retrofit.Builder()
             .baseUrl("https://api.flickr.com/")
             .addConverterFactory(GsonConverterFactory.create())
+            .client(client)
             .build()
 
         flickrApi = retrofit.create(FlickrApi::class.java)
     }
+    fun fetchPhotos(): LiveData<List<GalleryItem>> {
+        return fetchPhotosMetadata(flickrApi.fetchPhotos())
+    }
+    fun searchPhotos(query: String): LiveData<List<GalleryItem>>{
+        return fetchPhotosMetadata(flickrApi.searchPhotos(query))
+    }
 
-    fun fetchPhotos(): LiveData<List<GalleryItem>>{
+    fun fetchPhotosMetadata(flickRequest: Call<FlickerResponse>): LiveData<List<GalleryItem>>{
         val responseLiveData : MutableLiveData<List<GalleryItem>> = MutableLiveData()
 
 
-        val flickHomePageRequest : Call<FlickerResponse> = flickrApi.fetchPhotos()
-
-        flickHomePageRequest.enqueue(object : Callback<FlickerResponse> {
+        flickRequest.enqueue(object : Callback<FlickerResponse> {
 
             override fun onFailure(call: Call<FlickerResponse>, t: Throwable) {
                 Log.e(TAG, "Failed to fetch photos", t)

@@ -6,11 +6,10 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Handler
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.util.Log
+import android.view.*
 import android.widget.ImageView
-import android.widget.TextView
+import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -31,6 +30,7 @@ class PhotoGalleryFragment : Fragment() {
         super.onCreate(savedInstanceState)
 
         retainInstance = true
+        setHasOptionsMenu(true)
 
 
         photoGalleryViewModel = ViewModelProvider(this).get(PhotoGalleryViewModel::class.java)
@@ -43,6 +43,45 @@ class PhotoGalleryFragment : Fragment() {
 
         lifecycle.addObserver(thumbnailDownloader.fragmentLifecycleObserver)
 
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        super.onCreateOptionsMenu(menu, inflater)
+        inflater.inflate(R.menu.fragment_photo_gallery, menu)
+
+        val searchItem : MenuItem = menu.findItem(R.id.menu_item_search)
+        val searchView = searchItem.actionView as SearchView
+
+        searchView.apply {
+            setOnQueryTextListener(object : SearchView.OnQueryTextListener{
+                override fun onQueryTextSubmit(query: String): Boolean {
+                    Log.d(TAG,"QueryTextSubmit : $query" )
+                    photoGalleryViewModel.fetchPhotos(query)
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String): Boolean {
+                    Log.d(TAG, "QueryTextChange : $query")
+                    return false
+                }
+
+            })
+
+            setOnSearchClickListener{
+                searchView.setQuery(photoGalleryViewModel.searchTerm, false)
+            }
+        }
+
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_item_clear ->{
+                photoGalleryViewModel.fetchPhotos("")
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     override fun onCreateView(
